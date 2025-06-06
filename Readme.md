@@ -359,8 +359,9 @@ Proyek ini memakai Root Mean Squared Error (RMSE) sebagai metrik evaluasi dan Bi
 
 ## Referensi
 
-[1](https://www.researchgate.net/publication/346898118_PERKEMBANGAN_DAN_TRANSFORMASI_TEKNOLOGI_DIGITAL)
+[1] M. Danuri, "Perkembangan dan Transformasi Teknologi Digital", *INFOKAM*, no. 2, pp. 116-123, Sep. 2019, Retrieved from: https://www.researchgate.net/publication/346898118_PERKEMBANGAN_DAN_TRANSFORMASI_TEKNOLOGI_DIGITAL.
 
-[2](https://dinastirev.org/JEMSI/article/download/3087/1859/12951)
+[2] Pergeseran Preferensi Menonton dan Transformasi Media Digital 
+di Indonesia Akibat Dominasi Netflix https://dinastirev.org/JEMSI/article/download/3087/1859/12951
 
-[3](https://e-journal.hamzanwadi.ac.id/index.php/infotek/article/view/26083?articlesBySimilarityPage)
+[3] Prototipe Sistem Rekomendasi Film Indonesia Menggunakan Pendekatan Content Based Filtering dan Metode Vector Space Model https://e-journal.hamzanwadi.ac.id/index.php/infotek/article/view/26083?articlesBySimilarityPage

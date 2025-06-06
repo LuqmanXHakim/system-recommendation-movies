@@ -39,7 +39,6 @@ import seaborn as sns
 
 from scipy.sparse import csr_matrix
 from sklearn.neighbors import NearestNeighbors
-
 from keras import layers
 import tensorflow as tf
 from tensorflow import keras
@@ -86,49 +85,52 @@ movies
 
 # Extract kolom 'title' untuk memisahkan dengan 'year'
 def extract_title(title_year):
-
-  year = title_year[len(title_year)-5:len(title_year)-1]
-
-  if year.isnumeric():
-    title_no_year = title_year[:len(title_year)-7]
-    return title_no_year
-
-  else:
-    return title_year
+    import re
+    match = re.search(r'\((\d{4})\)$', title_year)
+    if match:
+        return title_year[:match.start()].strip()
+    else:
+        return title_year
 
 def extract_year(title_year):
-
-  year = title_year[len(title_year)-5:len(title_year)-1]
-
-  if year.isnumeric():
-    return year
-    year = int(year)
-
-  else:
+    if '(' in title_year and ')' in title_year:
+        year = title_year.split('(')[-1].split(')')[0]
+        if year.isdigit():
+            return year
     return np.nan
 
-movies['title_year'] = movies['title_year'].apply(lambda x: x.strip())
-movies['title'] = movies['title_year'].apply(extract_title)
-movies['year'] = movies['title_year'].apply(extract_year)
-movies.drop(['title_year'], axis=1, inplace=True)
+# Hapus spasi di kolom 'title_year'
+movies.loc[:, 'title_year'] = [val.strip() for val in movies['title_year']]
+
+# Ekstrak kolom 'title' dan 'year' menggunakan fungsi yang telah dibuat
+movies['title'] = [extract_title(val) for val in movies['title_year']]
+movies['year'] = [extract_year(val) for val in movies['title_year']]
+
+# Hapus kolom 'title_year'
+del movies['title_year']
 
 movies.head()
 
-# Memisahkan nilai-nilai pada kolom "Genres"
-movies['genres'] = movies.genres.str.split('|')
+# Memisahkan nilai-nilai pada kolom "genres"
+movies['genres'] = [genre.split('|') for genre in movies['genres']]
 movies.head()
 
-# Visualisasi jumlah film untuk setiap genre
-movies2 = movies.explode('genres')
+# Menghitung jumlah film per genre
+movies2 = movies.copy()
+movies2 = movies2.explode('genres')
 
-genre_counts = movies2['genres'].value_counts()
+genre_counts = movies2['genres'].value_counts().reset_index()
+genre_counts.columns = ['Genre', 'Count']
 
-sns.set_style("whitegrid")
+# Visualisasi dengan palet dan gaya yang berbeda
+plt.style.use('ggplot')
 plt.figure(figsize=(12, 6))
-sns.barplot(x=genre_counts.index, y=genre_counts.values, palette="Blues_d")
-plt.xlabel('Genres')
-plt.ylabel('Counts')
-plt.title('Genre Distribution')
+colors = sns.color_palette("Set2", len(genre_counts))
+
+plt.bar(genre_counts['Genre'], genre_counts['Count'], color=colors)
+plt.xlabel('Genre')
+plt.ylabel('Jumlah')
+plt.title('Distribusi Genre Film')
 plt.xticks(rotation=90)
 plt.tight_layout()
 plt.show()
@@ -168,18 +170,10 @@ ratings.head()
 ratings['rating'].value_counts().sort_index(ascending=True)
 
 rating_counts = ratings['rating'].value_counts().sort_index(ascending=True)
-
-sns.set(style="whitegrid")
-custom_palette = sns.color_palette("Purples", n_colors=len(rating_counts))
-
-plt.figure(figsize=(8, 6))
-sns.barplot(x=rating_counts.index, y=rating_counts.values, palette="Purples_d")
-
+rating_counts.plot(kind='bar', figsize=(8, 6), color=sns.color_palette("Purples", n_colors=len(rating_counts)))
 plt.xlabel('Rating')
 plt.ylabel('Count')
-
 plt.title('Rating Distribution')
-
 plt.show()
 
 """# Data Preparation"""
@@ -285,12 +279,15 @@ history = model.fit(
     validation_data=(x_val, y_val),
 )
 
-plt.plot(history.history["loss"])
-plt.plot(history.history["val_loss"])
-plt.title("Loss Model")
-plt.ylabel("loss")
-plt.xlabel("epoch")
-plt.legend(["train", "validation"], loc="upper right")
+fig, ax = plt.subplots()
+
+ax.plot(history.history["loss"], label="train")
+ax.plot(history.history["val_loss"], label="validation")
+ax.set_title("Loss Model")
+ax.set_ylabel("loss")
+ax.set_xlabel("epoch")
+ax.legend(loc="upper right")
+
 plt.show()
 
 plt.plot(history.history["root_mean_squared_error"])
@@ -308,21 +305,29 @@ Tahap pengembangan model machine learning atau modeling sistem rekomendasi dilak
 ## Model Development - Collaborative Filtering
 """
 
-user_id = movie_rating.userId.sample(1).iloc[0]
+user_id = movie_rating['userId'].sample(1, random_state=42).iloc[0]
 
-movies_watched = movie_rating[movie_rating.userId == user_id]
+movies_watched_ids = movie_rating[movie_rating['userId'] == user_id]['movieId'].values
 
-movies_notwatched = movie_rating[~movie_rating["movieId"].isin(movies_watched.movieId.values)]["movieId"]
-movies_notwatched = list(set(movies_notwatched).intersection(set(movie_encoded.keys())))
-movies_notwatched = [[movie_encoded.get(x)] for x in movies_notwatched]
+all_movie_ids = set(movie_encoded.keys())
+
+movies_notwatched_ids = list(all_movie_ids - set(movies_watched_ids))
 
 user_encoder = user_encoded.get(user_id)
-user_movie_array = np.hstack(([[user_encoder]] * len(movies_notwatched), movies_notwatched))
 
-ratings = model.predict(user_movie_array).flatten()
-top_ratings_indices = ratings.argsort()[-10:][::-1]
+user_tensor = tf.constant([user_encoder] * len(movies_notwatched_ids), dtype=tf.int32)
+
+movies_notwatched_encoded = [movie_encoded.get(movie_id) for movie_id in movies_notwatched_ids]
+movie_tensor = tf.constant(movies_notwatched_encoded, dtype=tf.int32)
+
+user_movie_array_tf = tf.stack([user_tensor, movie_tensor], axis=1)
+
+ratings_tf = model.predict(user_movie_array_tf).flatten()
+
+top_ratings_indices = np.argsort(ratings_tf)[-10:][::-1]
+
 recommended_movie_ids = [
-    movieencoded_.get(movies_notwatched[x][0]) for x in top_ratings_indices
+    movieencoded_.get(movies_notwatched_encoded[index]) for index in top_ratings_indices
 ]
 
 print("Tampilkan Rekomendasi Film untuk {} Penonton ".format(num_users))
@@ -333,7 +338,10 @@ print("Top 5 Film dengan Rating Tertinggi")
 
 print("====" * 9)
 
-top_movies_user = movies_watched.sort_values(by="rating", ascending=False).head(5)
+user_watched_movies = movie_rating[movie_rating['userId'] == user_id].drop_duplicates(subset=['movieId'])
+
+top_movies_user = user_watched_movies.sort_values(by="rating", ascending=False).head(5)
+
 for index, row in top_movies_user.iterrows():
     print(row.title, ":", row.genres)
 
@@ -345,7 +353,8 @@ print("====" * 6)
 
 recommended_movie_ids = []
 for x in top_ratings_indices:
-    movie_id = movieencoded_.get(movies_notwatched[x][0])
+    encoded_movie_id = movies_notwatched_encoded[x]
+    movie_id = movieencoded_.get(encoded_movie_id)
     if movie_id not in recommended_movie_ids:
         recommended_movie_ids.append(movie_id)
 
@@ -354,24 +363,30 @@ recommended_movies = movie_rating_unique[movie_rating_unique["movieId"].isin(rec
 for index, row in recommended_movies.iterrows():
     print(row.title, ":", row.genres)
 
-rm = recommended_movies.groupby('title')['rating'].max()
-rt = rm.sort_values(ascending=False)
+recommended_movies_sorted = recommended_movies.sort_values(by='rating', ascending=False)
 
-titles = rt.index
-ratings = rt.values
+titles = recommended_movies_sorted['title']
+ratings = recommended_movies_sorted['rating']
+
 palette = sns.color_palette("Greens", n_colors=len(titles))
 
 plt.figure(figsize=(6, 4))
-sns.barplot(x=ratings, y=titles, palette=palette)
+
+plt.barh(titles, ratings, color=palette)
+
 plt.xlabel('Rating', fontsize=12)
 plt.ylabel('Title', fontsize=12)
 plt.title('Rating of Recommended Movies')
+
+# Invert the y-axis
 plt.gca().invert_yaxis()
+
 plt.xlim(0, 5)
 plt.xticks(np.arange(0, 5.5, 0.5), fontsize=8)
 
 y_axis_labels = [' '.join(title.split()[:2]) for title in titles]
 plt.yticks(range(len(titles)), y_axis_labels, fontsize=8)
+
 plt.show()
 
 """## Model Development - Content Based Filtering"""
@@ -453,7 +468,7 @@ def recommend_movies_by_title(query_title):
 
     return "No movies found. Please check your input"
 
-rec = recommend_movies_by_title('Avengers')
+rec = recommend_movies_by_title('Ant-Man')
 rec
 
 movie_relevant = 10

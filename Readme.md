@@ -64,9 +64,16 @@ Terdapat beberapa metode yang bisa diterapkan dalam membangun sistem rekomendasi
 | *Usability*             | 6.18                                                                                                                  |
 | Jenis dan Ukuran Berkas | 4 csv (3.13 MB)                                                                                                       |
 
-Berdasarkan dataset tersebut, diketahui jumlah data movies berdasarkan atribut movieId adalah sebanyak 9125 data, dan terdapat sebanyak 671 jumlah rating berdasarkan atribut userId.
+Berdasarkan dataset tersebut, diketahui jumlah data movies berdasarkan atribut movieId adalah sebanyak 9125 data, dan terdapat sebanyak 671 jumlah rating berdasarkan atribut userId dan dikumpulkan dari 9 Januari 1995 sampai dengan 16 Oktober 2016.
 
-Kemudian dilakukan proses Exploratory Data Analysis (EDA) yang merupakan proses investigasi awal pada data untuk menganalisis karakteristik, menemukan pola, anomali, dan memeriksa asumsi pada data.
+Variabel-variabel pada MovieLens dataset adalah sebagai berikut:
+
+movieId : kode unik pengenal film
+title : judul film
+year : tahun film dirilis
+genres : pengelompokan film berdasarkan konten/alur cerita
+userId : kode unik pengguna/penonton
+rating : penilaian pengguna atas film
 
 - Movies
 
@@ -141,6 +148,14 @@ Berikut merupakan deskripsi statistik dari dataset ratings yang menampilkan juml
 | 75%   | 520.000    | 5418.000   | 4.000      | 1296192000.000 |
 | max   | 671.000    | 163949.000 | 5.000      | 1476641000.000 |
 
+- Pengecekan Missing Value
+
+Proses pengecekan data yang hilang atau missing value dilakukan pada masing-masing dataset movies dan ratings. Berdasarkan hasil pengecekan, ternyata tidak ada data yang hilang atau missing value dari dataset tersebut.
+
+- Pengecekan Data Duplikat
+
+Proses pengecekan data yang hilang atau missing value dilakukan pada masing-masing dataset movies dan ratings. Berdasarkan hasil pengecekan, ternyata tidak ada data yang hilang atau missing value dari dataset tersebut.
+
 Visualisasi Dataset
 
 Grafik 1 : Visualisasi sebaran genre film
@@ -155,9 +170,11 @@ Grafik 2: Visualisasi Rating
 
 Grafik 2, bisa dilihat bahwa pengguna paling banyak memberikan rating 4.0 disusul rating 3.0 dan rating 5.0
 
-## Data Preprocessing
+## Data Preparation
 
-Pada tahap ini, dilakukan penggabungan antara dataset movies dan ratings menggunakan fungsi merge dari library Pandas dengan mengacu pada kolom movieId yang terdapat pada kedua dataset tersebut.
+Tahap data preparation merupakan proses pengolahan data mentah agar siap digunakan oleh model machine learning. Pada tahap ini, dilakukan beberapa langkah penting seperti penanganan missing value, pengecekan data duplikat, serta pemisahan atribut genre pada dataset film.
+
+1. Penggabungan antara dataset movies dan ratings menggunakan fungsi merge dari library Pandas dengan mengacu pada kolom movieId yang terdapat pada kedua dataset tersebut.
 
 **Tabel 8. Penggabungan Data Movies dan Ratings**
 | movieId | genres                                             | title                                              | year | userId | rating |
@@ -174,25 +191,19 @@ Pada tahap ini, dilakukan penggabungan antara dataset movies dan ratings menggun
 | 162672  | \[Adventure, Drama, Romance]                       | Mohenjo Daro                                       | 2016 | 611    | 3.0    |
 | 163949  | \[Documentary]                                     | The Beatles: Eight Days a Week - The Touring Years | 2016 | 547    | 5.0    |
 
-## Data Preparation
 
-Tahap data preparation merupakan proses pengolahan data mentah agar siap digunakan oleh model machine learning. Pada tahap ini, dilakukan beberapa langkah penting seperti penanganan missing value, pengecekan data duplikat, serta pemisahan atribut genre pada dataset film.
 
-1. Impor Library dan Dataset
-Langkah pertama dalam proses analisis data adalah memuat pustaka Python dan dataset ke dalam lingkungan kerja seperti Jupyter Notebook.
-Pada tahap ini, dilakukan pengimporan library seperti pandas, numpy, dan lainnya yang dibutuhkan untuk memproses data, lalu membaca dataset dari sumber eksternal (misalnya file CSV atau database) ke dalam program.
+2. Pengecekan Missing Value
 
-2. Pemeriksaan Data
-Pemeriksaan awal terhadap dataset berguna untuk memahami struktur data dan mengenali potensi masalah sejak awal.
-Kegiatan ini meliputi melihat beberapa baris data, mengecek tipe data tiap kolom, serta mengidentifikasi keberadaan nilai kosong.
+Proses pengecekan data yang hilang atau missing value dilakukan pada masing-masing dataset movies dan ratings. Berdasarkan hasil pengecekan, ternyata tidak ada data yang hilang atau missing value dari dataset tersebut.
 
-3. Eksplorasi Data
+3. Pengecekan Data Duplikat
+
+Proses pengecekan data yang hilang atau missing value dilakukan pada masing-masing dataset movies dan ratings. Berdasarkan hasil pengecekan, ternyata tidak ada data yang hilang atau missing value dari dataset tersebut.
+
+4. Eksplorasi Data
 Eksplorasi data bertujuan untuk menggali informasi yang lebih dalam dari dataset melalui analisis statistik dan visualisasi.
 Langkah ini mencakup pembuatan grafik seperti histogram, scatter plot, dan boxplot untuk melihat distribusi data serta hubungan antar variabel.
-
-4. Pembersihan Data
-Sebelum data digunakan untuk pelatihan model, perlu dilakukan proses pembersihan agar data bersih dan konsisten.
-Tahap ini mencakup penanganan nilai kosong, penghapusan data ganda, penghilangan data tidak relevan, penanganan outlier, dan transformasi data jika diperlukan.
 
 5. Pembagian Data
 Supaya model machine learning bisa belajar dan diuji dengan baik, data harus dipisahkan menjadi data pelatihan dan data pengujian.
@@ -228,7 +239,7 @@ RecommenderNet adalah algoritma rekomendasi berbasis jaringan saraf tiruan (neur
   
   - Dapat belajar dari banyak fitur sekaligus untuk menghasilkan rekomendasi yang lebih akurat.
   
-  - Efektif dalam menangani dataset besar dengan variabel tinggi.
+  - Efektif dalam menangani dataset besar dengan variabel tinggi.z
   
   **Kekurangan**:
   - Proses pelatihan dan implementasi lebih kompleks dibandingkan algoritma tradisional.

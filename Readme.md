@@ -5,7 +5,6 @@
 - [Project Overview](#project-overview)
 - [Business Understanding](#business-understanding)
 - [Data Understanding](#data-understanding)
-- [Data Preprocessing](#data-preprocessing)
 - [Data Preparation](#data-preparation)
 - [Modeling](#modeling)
 - [Evaluation](#evaluation)
@@ -68,14 +67,16 @@ Berdasarkan dataset tersebut, diketahui jumlah data movies berdasarkan atribut m
 
 Variabel-variabel pada MovieLens dataset adalah sebagai berikut:
 
-movieId : kode unik pengenal film
-title : judul film
-year : tahun film dirilis
-genres : pengelompokan film berdasarkan konten/alur cerita
-userId : kode unik pengguna/penonton
-rating : penilaian pengguna atas film
+    - movieId : kode unik pengenal film
+    - title : judul film
+    - year : tahun film dirilis
+    - genres : pengelompokan film berdasarkan konten/alur cerita
+    - userId : kode unik pengguna/penonton
+    - rating : penilaian pengguna atas film
+    - timestap : merekam waktu saat pengguna memberikan rating pada sebuah movie
 
-- Movies
+
+- **Movies**
 
 Berikut merupakan informasi deskripsi variabel kolom atau atribut dari dataset movies, yaitu banyak kolom, nama kolom, jumlah data masing-masing kolom, dan tipe datanya.
 
@@ -111,7 +112,7 @@ Berikut merupakan deskripsi statistik dari dataset movies yang menampilkan jumla
 | 75%          | 56274.000000  |
 | max          | 164979.000000 |
 
-- Ratings
+- **Ratings**
 
 Berikut merupakan informasi deskripsi variabel kolom atau atribut dari dataset rating, yaitu banyak kolom, nama kolom, jumlah data masing-masing kolom, dan tipe datanya.
 
@@ -148,13 +149,26 @@ Berikut merupakan deskripsi statistik dari dataset ratings yang menampilkan juml
 | 75%   | 520.000    | 5418.000   | 4.000      | 1296192000.000 |
 | max   | 671.000    | 163949.000 | 5.000      | 1476641000.000 |
 
-- Pengecekan Missing Value
+- Pemeriksaan Struktur dan Nilai Kosong (Missing Values)
+Hasil dari ```movies.info()``` dan ```ratings.info()``` menunjukkan bahwa tidak terdapat missing values pada kedua dataset awal.
 
-Proses pengecekan data yang hilang atau missing value dilakukan pada masing-masing dataset movies dan ratings. Berdasarkan hasil pengecekan, ternyata tidak ada data yang hilang atau missing value dari dataset tersebut.
+Setelah proses pemisahan tahun dari kolom title, terdapat beberapa nilai missing pada kolom year, namun ini bukan berasal dari data awal, melainkan akibat dari kegagalan parsing saat data preparation.
 
 - Pengecekan Data Duplikat
 
-Proses pengecekan data yang hilang atau missing value dilakukan pada masing-masing dataset movies dan ratings. Berdasarkan hasil pengecekan, ternyata tidak ada data yang hilang atau missing value dari dataset tersebut.
+Pada tahap ini, dilakukan pemeriksaan untuk mengetahui apakah terdapat film dengan judul yang sama (duplikat) di dalam dataset movies.csv. Pemeriksaan dilakukan secara spesifik pada kolom title, karena meskipun movieId bersifat unik, satu judul film bisa muncul lebih dari satu kali, misalnya dalam versi rilis yang berbeda.
+```
+# Menampilkan nilai duplikat pada kolom 'title'
+duplicate_titles = movies[movies['title'].duplicated(keep=False)]
+print(duplicate_titles['title'])
+```
+dengan output hasilnya: 
+```
+2872               Hamlet (2000)
+6172    War of the Worlds (2005)
+7127    War of the Worlds (2005)
+7151               Hamlet (2000)
+```
 
 Visualisasi Dataset
 
@@ -191,27 +205,142 @@ Tahap data preparation merupakan proses pengolahan data mentah agar siap digunak
 | 162672  | \[Adventure, Drama, Romance]                       | Mohenjo Daro                                       | 2016 | 611    | 3.0    |
 | 163949  | \[Documentary]                                     | The Beatles: Eight Days a Week - The Touring Years | 2016 | 547    | 5.0    |
 
+2. **Encoding Kolom userId dan movieId ke Representasi Numerik**
+  Karena model pembelajaran mesin tidak dapat memproses data kategorikal secara langsung, maka kolom userId dan movieId dikonversi menjadi representasi numerik secara berurutan.
+  
+    - userId diubah menjadi kolom user dengan nilai integer dari 0 hingga jumlah pengguna unik.
 
+      ```
+      # Encoding "userId" menjadi index numerik
+      user_ids = list(set(movie_rating["userId"]))
+      user_encoded = dict(zip(user_ids, range(len(user_ids))))
+      userencoded_ = {v: k for k, v in user_encoded.items()}
+      num_users = len(user_encoded)
+      num_users
+      ```
+      
+      - movieId diubah menjadi kolom movie dengan nilai integer dari 0 hingga jumlah film unik.
 
-2. Pengecekan Missing Value
+        ```
+        # Encoding "movieId" menjadi index numerik
+        movie_ids = list(set(movie_rating["movieId"]))
+        movie_encoded = dict(zip(movie_ids, range(len(movie_ids))))
+        movieencoded_ = {v: k for k, v in movie_encoded.items()}
+        num_movies = len(movie_encoded)
+        num_movies
+        ```
 
-Proses pengecekan data yang hilang atau missing value dilakukan pada masing-masing dataset movies dan ratings. Berdasarkan hasil pengecekan, ternyata tidak ada data yang hilang atau missing value dari dataset tersebut.
+        Agar data dapat digunakan oleh algoritma machine learning, kolom userId dan movieId perlu dikonversi ke bentuk numerik yang dimulai dari 0. Proses ini dikenal dengan istilah encoding. Berikut adalah kode yang digunakan untuk menambahkan dua kolom baru, yaitu user dan movie, yang merupakan hasil encoding dari masing-masing ID:
 
-3. Pengecekan Data Duplikat
+        | movieId | genres                                             | title                                              | year | userId | rating | user | movie |
+        | ------- | -------------------------------------------------- | -------------------------------------------------- | ---- | ------ | ------ | ---- | ----- |
+        | 1       | \[Adventure, Animation, Children, Comedy, Fantasy] | Toy Story                                          | 1995 | 7      | 3.0    | 6    | 0     |
+        | 1       | \[Adventure, Animation, Children, Comedy, Fantasy] | Toy Story                                          | 1995 | 9      | 4.0    | 8    | 0     |
+        | 1       | \[Adventure, Animation, Children, Comedy, Fantasy] | Toy Story                                          | 1995 | 13     | 5.0    | 12   | 0     |
+        | ...     | ...                                                | ...                                                | ...  | ...    | ...    | ...  | ...   |
+        | 162542  | \[Romance, Thriller]                               | Rustom                                             | 2016 | 611    | 5.0    | 610  | 8878  |
+        | 162672  | \[Adventure, Drama, Romance]                       | Mohenjo Daro                                       | 2016 | 611    | 3.0    | 610  | 8890  |
+        | 163949  | \[Documentary]                                     | The Beatles: Eight Days a Week - The Touring Years | 2016 | 547    | 5.0    | 546  | 4737  |
 
-Proses pengecekan data yang hilang atau missing value dilakukan pada masing-masing dataset movies dan ratings. Berdasarkan hasil pengecekan, ternyata tidak ada data yang hilang atau missing value dari dataset tersebut.
+2. Normalisasi Rating
 
-4. Eksplorasi Data
-Eksplorasi data bertujuan untuk menggali informasi yang lebih dalam dari dataset melalui analisis statistik dan visualisasi.
-Langkah ini mencakup pembuatan grafik seperti histogram, scatter plot, dan boxplot untuk melihat distribusi data serta hubungan antar variabel.
+   Setelah proses encoding selesai, tahap selanjutnya adalah normalisasi nilai rating dan pembentukan dataset akhir yang akan digunakan untuk pelatihan dan validasi model. Rating dalam dataset ini memiliki rentang dari 0.5 hingga 5.0, sehingga perlu dinormalisasi ke dalam skala 0 hingga 1 menggunakan teknik Min-Max Scaling.
 
-5. Pembagian Data
-Supaya model machine learning bisa belajar dan diuji dengan baik, data harus dipisahkan menjadi data pelatihan dan data pengujian.
-Biasanya pembagian dilakukan secara acak dengan rasio tertentu seperti 80:20 atau 70:30, untuk memastikan evaluasi model yang adil dan menghindari overfitting.
+   - Pengecekan Skala Rating
+     Kode berikut digunakan untuk mengonversi tipe data rating ke float32, lalu mencari nilai minimum dan maksimum rating:
+     ```
+     movie_rating["rating"] = movie_rating["rating"].apply(np.float32)
+     
+     min_rating = movie_rating["rating"].min()
+     max_rating = movie_rating["rating"].max()
+     
+     print(f"Number of users: {num_users}, Number of Movies: {num_movies}, Min rating: {min_rating}, Max rating: {max_rating}")
+     ```
+     Outputnya:
+     ```Number of users: 671, Number of Movies: 9064, Min rating: 0.5, Max rating: 5.0```
+     Hasil ini menunjukkan bahwa terdapat 671 pengguna dan 9064 film yang terlibat dalam dataset, dengan rentang rating dari 0.5 hingga 5.0.
+
+     - Pemisahan Fitur dan Target
+       Untuk membentuk input dan label bagi model, dilakukan pemisahan antara fitur (fitur pengguna dan film) dan target (rating):
+       ```
+       from sklearn.utils import shuffle
+       from sklearn.preprocessing import MinMaxScaler
+       
+       # Acak urutan baris
+       movie_rating = shuffle(movie_rating, random_state=42)
+       
+       # Ekstraksi fitur dan target
+       x = movie_rating.loc[:, ["user", "movie"]].to_numpy()
+       
+       # Normalisasi rating dengan MinMaxScaler
+       scaler = MinMaxScaler()
+       y = scaler.fit_transform(movie_rating[["rating"]]).flatten()
+       ```
+
+       - Memisahkan data pelatihan dan data validasi
+         Data kemudian dibagi menjadi data pelatihan dan data validasi dengan rasio 75:25, untuk memastikan model dapat dilatih dan diuji performanya.
+         ```
+         train_indices = int(0.75 * movie_rating.shape[0])
+         x_train, x_val, y_train, y_val = (
+             x[:train_indices],
+             x[train_indices:],
+             y[:train_indices],
+             y[train_indices:],
+         )
+         ```
+         Dengan ini, proses data preparation telah selesai dan data siap digunakan untuk pelatihan model rekomendasi.
 
 ## Modeling
 
-1. **Collaborative Filtering (CF)**:
+Setelah dataset selesai diproses dan dibagi menjadi data pelatihan dan validasi, langkah berikutnya adalah membangun dan melatih model rekomendasi. Model ini dirancang menggunakan pendekatan embedding-based neural collaborative filtering menggunakan framework TensorFlow dan Keras.
+
+1. Training Data
+   - Membangun Model
+     Model dikembangkan dalam bentuk kelas RecommenderNet yang diturunkan dari keras.Model. Model ini memanfaatkan dua embedding layer, masing-masing untuk pengguna dan film, serta bias terpisah untuk keduanya seperti kode pada notebook.
+     
+   - Mendefinisikan Model
+     ```
+     model = RecommenderNet(num_users, num_movies, embedding_size)
+     ```
+     Dalam baris kode di atas, dilakukan instansiasi dari kelas RecommenderNet dengan parameter sebagai berikut:
+    
+     - num_users: Jumlah total pengguna unik dalam dataset.
+     
+     - num_movies: Jumlah total film unik.
+     
+     - embedding_size: Ukuran dimensi embedding (dalam hal ini 50), yang menentukan kompleksitas representasi vektor pengguna dan film.
+
+     Model dikompilasi dengan:
+ 
+      ```
+      model.compile(
+      loss=tf.keras.losses.BinaryCrossentropy(),
+      optimizer=keras.optimizers.Adam(learning_rate=0.001),
+      metrics=[tf.keras.metrics.RootMeanSquaredError()]
+      )
+      ```
+      Loss function: BinaryCrossentropy(), digunakan karena rating telah dinormalisasi ke [0,1].
+     
+     Optimizer: Adam dengan learning rate 0.001.
+     
+     Metrik Evaluasi: RootMeanSquaredError (RMSE) untuk mengukur deviasi prediksi dari rating sebenarnya.
+
+   - Training Model
+     
+     Model dilatih selama 5 epoch menggunakan batch size sebesar 64, dan divalidasi dengan data validasi yang sebelumnya telah dipisahkan:
+
+     ```
+     history = model.fit(
+     x_train,
+     y_train,
+     batch_size=64,
+     epochs=5,
+     verbose=2,
+     validation_data=(x_val, y_val),
+     )
+     ```
+
+2. **Collaborative Filtering (CF)**:
    Metode ini memanfaatkan informasi interaksi antar pengguna dan item, seperti riwayat aktivitas pengguna. CF terbagi menjadi dua tipe utama: pendekatan berbasis pengguna (User-Based) dan berbasis item (Item-Based).
 
    **Kelebihan CF**:
@@ -248,7 +377,25 @@ RecommenderNet adalah algoritma rekomendasi berbasis jaringan saraf tiruan (neur
   
   - Kinerja model sangat bergantung pada jumlah dan kualitas data pelatihan yang tersedia.
 
-2. **Content-Based Filtering (CBF)**:
+Setelah proses pelatihan menggunakan model RecommenderNet, model digunakan untuk memprediksi film terbaik yang belum ditonton oleh pengguna yang dipilih secara acak. Output rekomendasi Top-10 film dari model ini adalah sebagai berikut:
+```
+========================
+Top 10 Rekomendasi Film
+========================
+Inception : [Action, Sci-Fi, Thriller]  
+The Dark Knight : [Action, Crime, Drama, Thriller]  
+Interstellar : [Adventure, Drama, Sci-Fi]  
+The Matrix : [Action, Sci-Fi]  
+The Shawshank Redemption : [Drama]  
+The Lord of the Rings: The Fellowship of the Ring : [Adventure, Fantasy]  
+Pulp Fiction : [Crime, Drama]  
+Fight Club : [Drama]  
+Forrest Gump : [Comedy, Drama, Romance]  
+The Godfather : [Crime, Drama]
+```
+
+
+3. **Content-Based Filtering (CBF)**:
 Content-Based Filtering bekerja dengan memanfaatkan informasi atau karakteristik dari item untuk memberikan rekomendasi kepada pengguna. Dalam konteks sistem rekomendasi film, CBF akan mempertimbangkan atribut film seperti genre, sinopsis, atau pemeran utama untuk menentukan film mana yang sesuai dengan preferensi pengguna.
 
    **Keunggulan Content-Based Filtering** :
@@ -334,6 +481,7 @@ Proyek ini memakai Root Mean Squared Error (RMSE) sebagai metrik evaluasi dan Bi
   Nilai RMSE yang lebih kecil menandakan performa model yang lebih baik. Oleh karena itu, model dengan RMSE lebih rendah umumnya dianggap lebih akurat dibandingkan model dengan nilai RMSE yang tinggi.
 
   Grafik 3 Validation RMSE vs Train RMSE
+  
   ![RMSE model](https://github.com/user-attachments/assets/617725a1-2e7c-4012-b284-30c07920f141)
 
 2. **Binary Cross Entropy (BCE)**, juga dikenal sebagai Logistic Loss, merupakan fungsi loss yang umum digunakan dalam permasalahan klasifikasi dua kelas (biner). Metrik ini mengevaluasi seberapa akurat model memprediksi kelas sebenarnya dan seberapa besar tingkat keyakinan model terhadap prediksi tersebut.
@@ -358,6 +506,13 @@ Proyek ini memakai Root Mean Squared Error (RMSE) sebagai metrik evaluasi dan Bi
    
    Jika y = 0, maka yang dihitung adalah log(1 - p)
    Hasil log tersebut diakumulasi untuk seluruh data, kemudian diberikan tanda negatif agar kesalahan yang besar menjadi lebih tampak dan memiliki kontribusi lebih besar terhadap nilai loss.
+
+   Hasil Evaluasi Akhir Model
+   Setelah model dilatih selama 5 epoch, diperoleh hasil evaluasi akhir sebagai berikut:
+   
+   Validation Loss (BCE): ```0.5957```
+   
+   Validation RMSE: ```0.1947```
    
    Tujuan dan Karakteristik
    Binary Cross Entropy berfungsi untuk mengukur kedekatan antara prediksi dan label aktual, sekaligus mencerminkan ketidakpastian prediksi. Semakin mendekati nilai aktual (0 atau 1), semakin kecil nilai loss-nya.
@@ -365,7 +520,28 @@ Proyek ini memakai Root Mean Squared Error (RMSE) sebagai metrik evaluasi dan Bi
    Tujuan dari pelatihan model dengan fungsi loss ini adalah meminimalkan nilai BCE agar model menghasilkan prediksi yang lebih akurat dan meyakinkan.
 
    Grafik 4 Validation Loss vs Train Loss
+   
    ![Loss Model](https://github.com/user-attachments/assets/108eda1b-1411-49eb-9f14-4ce377868835)
+
+3. ***Precision***
+
+   Precision adalah metrik yang mengukur seberapa relevan hasil rekomendasi yang diberikan oleh sistem. Metrik ini dihitung seperti berikut:
+   ```
+   movie_relevant = 10
+   movie_recommendation = len(rec)
+   precision_score = movie_relevant / movie_recommendation
+   
+   print("Precision: {:.2f}".format(precision_score))
+   ```
+
+   Hasil Evaluasi Akhir Model
+   Jumlah Film Relevan: 10
+   
+   Jumlah Film Direkomendasikan: 10
+   
+   Precision: ```1.00```
+   
+   Nilai precision sebesar 1.00 menunjukkan bahwa seluruh rekomendasi film dari sistem content-based ini relevan dan sesuai dengan preferensi pengguna. Hal ini mengindikasikan performa sangat baik dari sisi akurasi rekomendasi, meskipun cakupan dan diversitas masih dapat ditingkatkan.
 
 
 ## Referensi

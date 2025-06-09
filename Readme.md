@@ -69,7 +69,6 @@ Variabel-variabel pada MovieLens dataset adalah sebagai berikut:
 
     - movieId : kode unik pengenal film
     - title : judul film
-    - year : tahun film dirilis
     - genres : pengelompokan film berdasarkan konten/alur cerita
     - userId : kode unik pengguna/penonton
     - rating : penilaian pengguna atas film
@@ -188,7 +187,64 @@ Grafik 2, bisa dilihat bahwa pengguna paling banyak memberikan rating 4.0 disusu
 
 Tahap data preparation merupakan proses pengolahan data mentah agar siap digunakan oleh model machine learning. Pada tahap ini, dilakukan beberapa langkah penting seperti penanganan missing value, pengecekan data duplikat, serta pemisahan atribut genre pada dataset film.
 
-1. Penggabungan antara dataset movies dan ratings menggunakan fungsi merge dari library Pandas dengan mengacu pada kolom movieId yang terdapat pada kedua dataset tersebut.
+1. Pembersihan Dataset movies
+Kolom title yang semula mengandung gabungan antara judul film dan tahun, dipisahkan menjadi dua kolom baru: title dan year.
+```
+# Mengubah nama kolom 'title'
+movies.rename(columns={'title':'title_year'}, inplace=True)
+movies
+```
+```
+# Extract kolom 'title' untuk memisahkan dengan 'year'
+def extract_title(title_year):
+    import re
+    match = re.search(r'\((\d{4})\)$', title_year)
+    if match:
+        return title_year[:match.start()].strip()
+    else:
+        return title_year
+```
+```
+def extract_year(title_year):
+    if '(' in title_year and ')' in title_year:
+        year = title_year.split('(')[-1].split(')')[0]
+        if year.isdigit():
+            return year
+    return np.nan
+```
+penghapusan kolom ```title_year```
+```
+# Hapus spasi di kolom 'title_year'
+movies.loc[:, 'title_year'] = [val.strip() for val in movies['title_year']]
+
+# Ekstrak kolom 'title' dan 'year' menggunakan fungsi yang telah dibuat
+movies['title'] = [extract_title(val) for val in movies['title_year']]
+movies['year'] = [extract_year(val) for val in movies['title_year']]
+
+# Hapus kolom 'title_year'
+del movies['title_year']
+```
+Tujuan: Memisahkan informasi agar bisa digunakan secara terpisah, misalnya jika ingin menyaring berdasarkan tahun.
+
+2. Pembersihan Dataset ratings
+Kolom timestamp dihapus karena tidak digunakan dalam proses pemodelan maupun analisis.
+```
+# Drop kolom "timestamp"
+ratings = ratings.drop('timestamp', axis=1)
+ratings.head()
+```
+Tujuan: Menghilangkan fitur yang tidak relevan agar dataset lebih ringkas.
+
+3. Transformasi Kolom genres
+Kolom genres yang semula berupa string dipisah menjadi list berdasarkan tanda |.
+```
+# Memisahkan nilai-nilai pada kolom "genres"
+movies['genres'] = [genre.split('|') for genre in movies['genres']]
+movies.head()
+```
+Tujuan: Mempermudah pemrosesan konten genre dalam analisis berbasis konten (content-based filtering).
+
+4. Penggabungan antara dataset movies dan ratings menggunakan fungsi merge dari library Pandas dengan mengacu pada kolom movieId yang terdapat pada kedua dataset tersebut.
 
 **Tabel 8. Penggabungan Data Movies dan Ratings**
 | movieId | genres                                             | title                                              | year | userId | rating |
@@ -205,7 +261,7 @@ Tahap data preparation merupakan proses pengolahan data mentah agar siap digunak
 | 162672  | \[Adventure, Drama, Romance]                       | Mohenjo Daro                                       | 2016 | 611    | 3.0    |
 | 163949  | \[Documentary]                                     | The Beatles: Eight Days a Week - The Touring Years | 2016 | 547    | 5.0    |
 
-2. **Encoding Kolom userId dan movieId ke Representasi Numerik**
+5. **Encoding Kolom userId dan movieId ke Representasi Numerik**
   Karena model pembelajaran mesin tidak dapat memproses data kategorikal secara langsung, maka kolom userId dan movieId dikonversi menjadi representasi numerik secara berurutan.
   
     - userId diubah menjadi kolom user dengan nilai integer dari 0 hingga jumlah pengguna unik.
@@ -242,7 +298,7 @@ Tahap data preparation merupakan proses pengolahan data mentah agar siap digunak
         | 162672  | \[Adventure, Drama, Romance]                       | Mohenjo Daro                                       | 2016 | 611    | 3.0    | 610  | 8890  |
         | 163949  | \[Documentary]                                     | The Beatles: Eight Days a Week - The Touring Years | 2016 | 547    | 5.0    | 546  | 4737  |
 
-2. Normalisasi Rating
+6. Normalisasi Rating
 
    Setelah proses encoding selesai, tahap selanjutnya adalah normalisasi nilai rating dan pembentukan dataset akhir yang akan digunakan untuk pelatihan dan validasi model. Rating dalam dataset ini memiliki rentang dari 0.5 hingga 5.0, sehingga perlu dinormalisasi ke dalam skala 0 hingga 1 menggunakan teknik Min-Max Scaling.
 
@@ -288,7 +344,31 @@ Tahap data preparation merupakan proses pengolahan data mentah agar siap digunak
              y[train_indices:],
          )
          ```
-         Dengan ini, proses data preparation telah selesai dan data siap digunakan untuk pelatihan model rekomendasi.
+
+7. Pembuatan Pivot Table, pengisian nilai NaN, dan filtering data:
+Membuat pivot table untuk menggabungkan pengguna yang memberikan rating dan jumlah film yang mendapat rating
+- Filtering Data
+```
+no_user_voted = movie_rating.groupby('movieId')['rating'].agg('count')
+no_movies_voted = movie_rating.groupby('userId')['rating'].agg('count')
+```
+- Pembuatan pivot table
+```
+final_dataset = movie_rating.pivot(index='movieId',columns='userId',values='rating')
+```
+- Pengisian nilai NaN
+```
+final_dataset.fillna(0,inplace=True)
+final_dataset.head()
+```
+
+8. Konversi ke CSR Matrix
+
+Data dikonversi menjadi bentuk sparse matrix (Compressed Sparse Row matrix) yang lebih efisien untuk perhitungan KNN.
+```
+csr_data = csr_matrix(final_dataset.values)
+final_dataset.reset_index(inplace=True)
+```
 
 ## Modeling
 
@@ -382,16 +462,16 @@ Setelah proses pelatihan menggunakan model RecommenderNet, model digunakan untuk
 ========================
 Top 10 Rekomendasi Film
 ========================
-Inception : [Action, Sci-Fi, Thriller]  
-The Dark Knight : [Action, Crime, Drama, Thriller]  
-Interstellar : [Adventure, Drama, Sci-Fi]  
-The Matrix : [Action, Sci-Fi]  
-The Shawshank Redemption : [Drama]  
-The Lord of the Rings: The Fellowship of the Ring : [Adventure, Fantasy]  
-Pulp Fiction : [Crime, Drama]  
-Fight Club : [Drama]  
-Forrest Gump : [Comedy, Drama, Romance]  
-The Godfather : [Crime, Drama]
+Pulp Fiction : ['Comedy', 'Crime', 'Drama', 'Thriller']
+Cool Hand Luke : ['Drama']
+African Queen, The : ['Adventure', 'Comedy', 'Romance', 'War']
+Godfather, The : ['Crime', 'Drama']
+Shawshank Redemption, The : ['Crime', 'Drama']
+Misérables, Les : ['Drama', 'War']
+Killing Fields, The : ['Drama', 'War']
+Best Years of Our Lives, The : ['Drama', 'War']
+It Happened One Night : ['Comedy', 'Romance']
+Band of Brothers : ['Action', 'Drama', 'War']
 ```
 
 

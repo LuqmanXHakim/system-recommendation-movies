@@ -188,6 +188,12 @@ Grafik 2, bisa dilihat bahwa pengguna paling banyak memberikan rating 4.0 disusu
 Tahap data preparation merupakan proses pengolahan data mentah agar siap digunakan oleh model machine learning. Pada tahap ini, dilakukan beberapa langkah penting seperti penanganan missing value, pengecekan data duplikat, serta pemisahan atribut genre pada dataset film.
 
 1. Pembersihan Dataset movies
+Penghapusan data duplikat pada judul film
+```
+# Menampilkan nilai duplikat pada kolom 'title'
+duplicate_titles = movies[movies['title'].duplicated(keep=False)]
+print(duplicate_titles['title'])
+```
 Kolom title yang semula mengandung gabungan antara judul film dan tahun, dipisahkan menjadi dua kolom baru: title dan year.
 ```
 # Mengubah nama kolom 'title'
